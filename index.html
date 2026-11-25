@@ -745,7 +745,8 @@
     if (DEMO) {
       const F = 4.6;                                  // 티켓이 인식되는 순간(영상 시간)
       const FILM_AT = 19.6;                           // '본편 보기'를 누르는 순간(인식 후)
-      const END = F + 29.5;
+      const FILM_LEN = 8.6;                          // 본편을 보여 주는 길이
+      const END = F + 31.3;
       const fingerEl = document.getElementById("finger");
       const fadeEl = Object.assign(document.createElement("div"), { style: "position:fixed;inset:0;background:#000;z-index:50;opacity:0;pointer-events:none" });
       document.body.appendChild(fadeEl);
@@ -785,8 +786,8 @@
         [F + 18.6, [0.42, -0.42, 1.85], [0.24, -0.25, 0.1]],
         [F + FILM_AT, [0.0, 0.15, 3.3], [0, 0.35, 0]],
         [F + FILM_AT + 1.6, [0.0, 0.85, 3.7], [0, 1.45, 0]],
-        [F + 26.6, [0.0, 0.85, 3.7], [0, 1.45, 0]],
-        [F + 28.4, [0.0, -0.05, 3.15], [0, -0.05, 0]],
+        [F + FILM_AT + FILM_LEN, [0.0, 0.85, 3.7], [0, 1.45, 0]],
+        [F + FILM_AT + FILM_LEN + 1.8, [0.0, -0.05, 3.15], [0, -0.05, 0]],
         [END, [0.0, -0.05, 3.15], [0, -0.05, 0]]
       ];
       const sm = (x) => x * x * x * (x * (x * 6 - 15) + 10);
@@ -813,13 +814,7 @@
         fingerEl.style.left = x + "px"; fingerEl.style.top = y + "px"; fingerEl.style.opacity = o; fingerEl.style.transform = `scale(${sc})`;
       }
 
-      let found = false, filmClicked = false, lastSwipeX = null;
-      const waitSeek = (t) => new Promise((res) => {
-        if (Math.abs(video.currentTime - t) < 0.001) return res();
-        const done = () => { video.removeEventListener("seeked", done); res(); };
-        video.addEventListener("seeked", done); video.currentTime = t; setTimeout(done, 1500);
-      });
-
+      let found = false, filmClicked = false, lastSwipeX = null, filmIdx = -1, filmTex = null;
       window.__demo = {
         fps: 30, duration: END,
         ready: () => new Promise((res) => { (function chk() { (modelRoot && videoReady && paneMat.map && stairsMat.map) ? res(true) : setTimeout(chk, 100); })(); }),
@@ -851,15 +846,23 @@
             finger(r.left + r.width / 2, r.top + r.height / 2, (span(sq, FILM_AT - 0.9, FILM_AT - 0.6) - span(sq, FILM_AT + 0.1, FILM_AT + 0.4)) * 0.95, press ? 0.8 : 1);
             if (!filmClicked && sq >= FILM_AT) { filmClicked = true; filmButton.click(); }
           } else { finger(-100, -100, 0); lastSwipeX = null; }
-          // 본편: 영상 시간을 프레임에 맞춰 넘긴다
-          if (screenOpen && video) {
+          // 본편: 미리 뽑아 둔 본편 프레임(30fps)을 차례로 붙인다(헤드리스에선 영상 되감기가 화면에 안 잡혀서)
+          if (screenOpen && screenMesh) {
             video.pause();
-            await waitSeek(Math.max(0, sq - FILM_AT) % (video.duration || 1));
-            if (screenTex) screenTex.needsUpdate = true;
+            const idx = Math.min(Math.floor((sq - FILM_AT) * 30) + 1, Math.round(FILM_LEN * 30));
+            if (idx !== filmIdx) {
+              filmIdx = idx;
+              const tx = await loadTex(`./demo/film/${String(idx).padStart(4, "0")}.jpg`);
+              if (tx) { if (filmTex) filmTex.dispose(); filmTex = tx; screenMesh.material.map = tx; screenMesh.material.needsUpdate = true; }
+            }
           }
-          if (found && sq >= 26.6 - 0.2 && screenOpen) filmButton.click();
+          if (found && sq >= FILM_AT + FILM_LEN - 0.2 && screenOpen) filmButton.click();
           if (seqStart >= 0) updateSequence(dt);
           updateVideoBar();
+          if (videoBar && filmIdx > 0 && video.duration > 0) {          // 재생바도 본편 프레임에 맞춤
+            const pr = Math.min(1, (filmIdx / 30) / video.duration);
+            videoBar.fill.scale.x = Math.max(pr, 0.0001); videoBar.fill.position.x = -SCREEN_W / 2 + (SCREEN_W * pr) / 2;
+          }
           fadeEl.style.opacity = span(tv, END - 1.0, END);
           renderer.autoClear = false; renderer.clear();
           renderer.render(bgScene, camera); renderer.clearDepth(); renderer.render(scene, camera);
@@ -868,7 +871,8 @@
     }
 
     // 시험용 훅(헤드리스 점검에서만 사용)
-    window.__ar = { get visible() { return targetVisible; }, get seq() { return seqTime(); }, T, openFilm: () => filmButton.click() };
+    window.__ar = { get visible() { return targetVisible; }, get seq() { return seqTime(); }, T, openFilm: () => filmButton.click(),
+                  get film() { return video ? { t: video.currentTime, paused: video.paused, ready: videoReady, failed: videoFailed } : null; } };
   </script>
 </body>
 </html>
