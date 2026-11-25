@@ -461,7 +461,7 @@
     });
 
     // ───────── 연출 ─────────
-    // 빛이 꺼짐 → 모스 「기우」 깜빡임(비프) → 전부 켜짐 + 자막 '기우' → 번개와 함께 창이 안쪽으로 열림(계단) → 텐트 → 크레딧
+    // 빛이 꺼짐 → 모스 「기우」 깜빡임(비프, 자막엔 기호만) → 전부 켜짐 → 번개와 함께 창이 안쪽으로 열림(계단) → 텐트 → 크레딧
     const ease = {
       inOut: (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
       out: (t) => 1 - Math.pow(1 - t, 3),
@@ -517,15 +517,15 @@
       });
       columnHalo.material.opacity = anyOn * (allOn ? 0.55 : 0.32);
 
-      // 자막: 깜빡인 만큼 모스 기호가 찍히고, 끝나면 '기 우'
+      // 자막: 깜빡인 만큼 모스 기호가 찍힘(한글 풀이는 넣지 않음)
       if (inMorse) {
         const done = ELS.els.filter((e) => u >= e.s);
         const li = done.length ? done[done.length - 1].li : -1;
         const parts = MORSE_TXT.slice(0, li + 1);
         if (li >= 0) { const inLetter = done.filter((e) => e.li === li).length; parts[li] = MORSE_TXT[li].split(" ").slice(0, inLetter).join(" "); }
         setSub(parts.join("   "));
-      } else if (t >= T.allOn && t < T.open + 2.6) setSub("기우", true);
-      else if (t >= T.open + 2.6) setSub("");
+      } else if (t >= T.morse0 && t < T.open + 0.4) setSub(MORSE_TXT.join("   "));   // 신호가 끝나면 기호만 잠깐 남았다가 창이 열릴 때 사라짐
+      else setSub("");
 
       // 4) 번개 + 창이 안쪽으로 열림
       if (t >= T.open && !opened) { opened = true; portal.visible = true; lightning(); }
