@@ -558,7 +558,7 @@
 
     const flashEl = document.getElementById("flash");
     function lightning() { playSfx("thunder"); flashAt = seqTime(); }
-    creditsEl.innerHTML = "<b>B1 · 기생충</b>원작 「기생충」(2019) 감독 봉준호<br>제목 로고 © 2019 CJ ENM · 바른손이앤에이<br>모션그래픽스2 · 202405143 이정찬";
+    // 엔드 크레딧(화면 위 한글 글자)은 잘 안 보이고 거슬려서 뺌 — 출처는 저장소 README에 둠
 
     document.getElementById("replay").addEventListener("click", () => { if (targetVisible) startSequence(); });
 
